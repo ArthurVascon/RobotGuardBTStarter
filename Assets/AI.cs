@@ -70,6 +70,7 @@ public class AI : MonoBehaviour
         //Panda - Succeed
         Task.current.Succeed(); 
     }
+
     [Task] 
     public void MoveToDestination() { 
         //Debug para a movimentação através do tempo
@@ -79,6 +80,69 @@ public class AI : MonoBehaviour
         if (agent.remainingDistance <= agent.stoppingDistance && !agent.pathPending) { 
             Task.current.Succeed(); 
         } 
+    }
+    //Seleciona um destino pré definido.
+    [Task] 
+    public void PickDestination(int x, int z) { 
+        Vector3 dest = new Vector3(x, 0, z); 
+        agent.SetDestination(dest); 
+        Task.current.Succeed();
+    }
+    //Transforma Target para Player
+    [Task]
+    public void TargetPlayer() { 
+        target = player.transform.position; 
+        Task.current.Succeed(); 
+    }
+    //Função de tiro
+    [Task]
+    public bool Fire() {
+        GameObject bullet = GameObject.Instantiate(bulletPrefab, bulletSpawn.transform.position, bulletSpawn.transform.rotation); 
+        bullet.GetComponent<Rigidbody>().AddForce(bullet.transform.forward * 2000);
+        return true;
+     }
+
+    //Prende a mira no personagem.
+    [Task] 
+    public void LookAtTarget() { 
+        Vector3 direction = target - this.transform.position;
+        this.transform.rotation = Quaternion.Slerp(this.transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * rotSpeed);
+        if (Task.isInspected) 
+            Task.current.debugInfo = string.Format("angle={0}", Vector3.Angle(this.transform.forward, direction)); 
+        if (Vector3.Angle(this.transform.forward, direction) < 5.0f) { 
+            Task.current.Succeed(); 
+        } 
+    }
+
+    //Condição de raycast para ver se enxerga o player ou parede
+    [Task]
+    bool SeePlayer()
+    {
+        Vector3 distance = player.transform.position - this.transform.position;
+        RaycastHit hit;
+        bool seeWall = false;
+        Debug.DrawRay(this.transform.position, distance, Color.red);
+        if (Physics.Raycast(this.transform.position, distance, out hit))
+        {
+            if (hit.collider.gameObject.tag == "wall")
+            {
+                seeWall = true;
+            }
+        }
+        if (Task.isInspected)
+            Task.current.debugInfo = string.Format("wall={0}", seeWall);
+        if (distance.magnitude < visibleRange && !seeWall)
+            return true;
+        else
+            return false;
+    }
+
+    //Função pra mudar ângulo para posição
+    [Task] 
+    bool Turn(float angle) {
+        var p = this.transform.position + Quaternion.AngleAxis(angle, Vector3.up) * this.transform.forward;
+        target = p; 
+        return true; 
     }
 }
 
